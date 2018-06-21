@@ -16,13 +16,13 @@ random.seed(1)
 class DeepQNetwork:
     def __init__(
             self,
-            n_actions=42 * 5,
+            n_actions=42,
             n_features=17 * 45 + 42 * 3,
             learning_rate=0.01,
             reward_decay=0.9,
             e_greedy=0.9,
-            replace_target_iter=300,
-            memory_size=1000,
+            replace_target_iter=200,
+            memory_size=15000,
             batch_size=64,
             e_greedy_increment=None,
             output_graph=False,
@@ -67,7 +67,7 @@ class DeepQNetwork:
         with tf.variable_scope('eval_net'):
             # c_names(collections_names) are the collections to store variables
             c_names, n_l1, n_l2, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 700, 700, \
+                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 600, 600, \
                 tf.random_normal_initializer(0., 0.3), tf.constant_initializer(0.1)  # config of layers
 
             # hidden layer. collections is used later when assign to target net
@@ -76,21 +76,22 @@ class DeepQNetwork:
                 b1 = tf.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
                 l1 = tf.nn.relu(tf.matmul(self.s, w1) + b1)
 
-            #with tf.variable_scope('l2'):
-            #    w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
-            #    b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
-            #    l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+            with tf.variable_scope('l2'):
+                w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
+                b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
+                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
 
             # output layer. collections is used later when assign to target net
             with tf.variable_scope('l3'):
                 w3 = tf.get_variable('w3', [n_l2, self.n_actions], initializer=w_initializer, collections=c_names)
                 b3 = tf.get_variable('b3', [1, self.n_actions], initializer=b_initializer, collections=c_names)
-                self.q_eval = tf.matmul(l1, w3) + b3
+                self.q_eval = tf.matmul(l2, w3) + b3
 
         with tf.variable_scope('loss'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_eval))
         with tf.variable_scope('train'):
             self._train_op = tf.train.RMSPropOptimizer(self.lr).minimize(self.loss)
+            #self._train_op = tf.train.AdamOptimizer(epsilon=0.1).minimize(self.loss)
 
         # ------------------ build target_net ------------------
         self.s_ = tf.placeholder(tf.float32, [None, self.n_features], name='s_')    # input
@@ -104,16 +105,16 @@ class DeepQNetwork:
                 b1 = tf.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
                 l1 = tf.nn.relu(tf.matmul(self.s_, w1) + b1)
 
-            #with tf.variable_scope('l2'):
-            #    w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
-            #    b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
-            #    l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+            with tf.variable_scope('l2'):
+                w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
+                b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
+                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
 
             # output layer. collections is used later when assign to target net
             with tf.variable_scope('l3'):
                 w3 = tf.get_variable('w3', [n_l2, self.n_actions], initializer=w_initializer, collections=c_names)
                 b3 = tf.get_variable('b3', [1, self.n_actions], initializer=b_initializer, collections=c_names)
-                self.q_next = tf.matmul(l1, w3) + b3
+                self.q_next = tf.matmul(l2, w3) + b3
 
     def store_transition(self, s, a, r, s_):
         if not hasattr(self, 'memory_counter'):

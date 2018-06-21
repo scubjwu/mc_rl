@@ -12,29 +12,38 @@ class Env:
     def __init__(self):
         # 当前环境state
         self.state = []
+        
         # mc移动花费的时间
         self.move_time = 0
+        self.move_dist = 0
+        self.total_time = 0
+
         # 一个回合最大的时间，用秒来表示，早上八点到晚上10点，十四个小时，总共 14 * 3600 秒的时间
         # 如果self.get_evn_time() 得到的时间大于这个时间，则表示该回合结束
         self.one_episode_time = 14 * 3600
+        
         # sensor 和 mc的能量信息
         self.sensors_mobile_charger = {}
         # 初始化所有的sensor,mc 的能量信息
         self.set_sensors_mobile_charger()
+        
         # 初始化self.sensors_mobile_charger 和 self.sensors
         # self.set_sensors_mobile_charger()
         # 对剩余寿命进行独热编码
         self.rl = ['Greater than the threshold value, 0', 'Smaller than the threshold value, 1', 'dead, -1']
         self.rl_label_binarizer = LabelBinarizer()
         self.rl_one_hot_encoded = self.rl_label_binarizer.fit_transform(self.rl)
+        
         # 对是否属于hotspot 独热编码
         self.belong = ['1', '0']
         self.belong_label_binarizer = LabelBinarizer()
         self.belong_one_hot_encoded = self.belong_label_binarizer.fit_transform(self.belong)
+        
         # 获得所有的hotspot
         self.hotspots = []
         # 初始化hotspots
         self.set_hotspots()
+        
         # 记录当前时刻所在的hotspot，在环境初始化的时候设置为base_station
         self.current_hotspot = self.hotspots[0]
 
@@ -179,20 +188,21 @@ class Env:
         reward = 0
         
         if action != -1:
-            hotspot_num = action / 5 + 1
-            staying_time = action % 5
+            hotspot_num = action + 1
+            staying_time = 1
         else:
             hotspot_num = 0
             staying_time = 0
         	
-
         # 得到下一个hotspot
         hotspot = self.find_hotspot_by_num(hotspot_num)
         # 当前hotspot 和 下一个hotspot间的距离,得到移动花费的时间，添加到self.move_time 里
         distance = hotspot.get_distance_between_hotspot(self.current_hotspot)
+        self.move_dist += distance
+
         time = distance / self.speed
         self.move_time += time
-        # self.move_time += time
+        self.total_time += time
 
         # 更新self.current_hotspot 为 action 中选择的 hotspot
         self.current_hotspot = hotspot
@@ -208,11 +218,14 @@ class Env:
         # 将在hotspot_num 等待的时间 添加到state中的CS
         for i in range(42):
             if i == hotspot_num - 1:
-                self.state[2 * i] += 1
-                self.state[2 * i + 1] += staying_time
-                self.state[2 * i + 2] = 1
+                self.state[3 * i] += 1
+                self.state[3 * i + 1] += staying_time
+                self.state[3 * i + 2] = 1
             else:
-                self.state[2 * i + 2] = 0
+                self.state[3 * i + 2] = 0
+
+
+        self.total_time += staying_time * 5 * 60
 
 
         # mc 结束等待后环境的时间
@@ -328,6 +341,7 @@ class Env:
         # mc 给到达的sensor 充电后，如果能量为负或者 self.get_evn_time() > self.one_episode_time，则回合结束，反之继续
         if self.sensors_mobile_charger['MC'][0] <= 0 or self.get_evn_time() > self.one_episode_time:
             done = 1
+            #print self.move_dist, self.get_evn_time()
         else:
             done = 0
 
@@ -364,12 +378,15 @@ class Env:
 
     # 获得当前环境的秒
     def get_evn_time(self):
-        total_t = 0
-        for i in range(42 * 3):
-            if i % 3 == 1:
-                total_t += self.state[i]
-        total_time = total_t * 5 * 60 + self.move_time
-        return total_time
+        return self.total_time
+
+        #total_t = 0
+        #for i in range(42 * 3):
+        #    if i % 3 == 1:
+        #        total_t += self.state[i]
+        #total_time = total_t * 5 * 60 + self.move_time
+
+        #return total_time
 
     def test(self):
         dis = 0

@@ -19,7 +19,7 @@ def run_maze():
         while True:
 
             if init is True:
-                observation, reward, done = env.reset(RL)
+                observation, _, _ = env.reset(RL)
                 init = False
 
             # RL choose action based on observation
@@ -27,6 +27,7 @@ def run_maze():
 
             # RL take action and get next observation and reward
             observation_, reward, done = env.step(action)
+            #print action, reward
             total_reward += reward
 
             RL.store_transition(observation, action, reward, observation_)
@@ -55,12 +56,7 @@ def run_maze():
 
 if __name__ == "__main__":
     # game
-    RL = DeepQNetwork(learning_rate=0.01,
-                      reward_decay=0.9,
-                      e_greedy=0.9,
-                      replace_target_iter=200,
-                      memory_size=3000,
-                      # output_graph=True
-                      )
+    RL = DeepQNetwork()
+
     run_maze()
     #RL.plot_cost()
