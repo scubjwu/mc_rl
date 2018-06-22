@@ -312,7 +312,7 @@ class Env:
                                 
                 # 加上得到的奖励,需要先将 rl 的单位先转化成小时
                     rl = rl / 3600
-                    reward += math.exp(-rl)
+                    reward += math.exp(-rl) 
 
             else:
             # 更新state中 的剩余寿命信息的状态
@@ -322,7 +322,7 @@ class Env:
                     
                 if sensor_alive:
                     sensor[3] = False
-                    reward += self.charging_penalty
+                    reward += self.charging_penalty 
 
             hotspot_pro = []
             for j in range(42):
@@ -339,7 +339,7 @@ class Env:
 
         #phase = int(end_wait_seconds / 3600) + 8
         # mc 给到达的sensor 充电后，如果能量为负或者 self.get_evn_time() > self.one_episode_time，则回合结束，反之继续
-        if self.sensors_mobile_charger['MC'][0] <= 0 or self.get_evn_time() > self.one_episode_time:
+        if self.sensors_mobile_charger['MC'][0] <= 0 or self.get_evn_time() + 30 * 60 > self.one_episode_time:
             done = 1
             #print self.move_dist, self.get_evn_time()
         else:

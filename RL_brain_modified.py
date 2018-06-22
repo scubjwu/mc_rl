@@ -18,12 +18,12 @@ class DeepQNetwork:
             self,
             n_actions=42,
             n_features=17 * 45 + 42 * 3,
-            learning_rate=0.01,
+            learning_rate=0.001,
             reward_decay=0.9,
-            e_greedy=0.9,
+            e_greedy=0.95,
             replace_target_iter=200,
             memory_size=15000,
-            batch_size=64,
+            batch_size=256,
             e_greedy_increment=None,
             output_graph=False,
     ):
@@ -67,8 +67,8 @@ class DeepQNetwork:
         with tf.variable_scope('eval_net'):
             # c_names(collections_names) are the collections to store variables
             c_names, n_l1, n_l2, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 600, 600, \
-                tf.random_normal_initializer(0., 0.3), tf.constant_initializer(0.1)  # config of layers
+                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 700, 700, \
+                tf.random_normal_initializer(0., 0.1), tf.constant_initializer(-0.1)  # config of layers
 
             # hidden layer. collections is used later when assign to target net
             with tf.variable_scope('l1'):
@@ -89,9 +89,10 @@ class DeepQNetwork:
 
         with tf.variable_scope('loss'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_eval))
+
         with tf.variable_scope('train'):
-            self._train_op = tf.train.RMSPropOptimizer(self.lr).minimize(self.loss)
-            #self._train_op = tf.train.AdamOptimizer(epsilon=0.1).minimize(self.loss)
+            #self._train_op = tf.train.RMSPropOptimizer(self.lr).minimize(self.loss)
+            self._train_op = tf.train.AdamOptimizer(epsilon=1e-4).minimize(self.loss)
 
         # ------------------ build target_net ------------------
         self.s_ = tf.placeholder(tf.float32, [None, self.n_features], name='s_')    # input
@@ -176,7 +177,7 @@ class DeepQNetwork:
                                                 self.q_target: q_target})
 
         self.cost_his.append(self.cost)
-        # print('self.cost', self.cost)
+        print('self.cost', self.cost)
         # increasing epsilon
         self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
 
