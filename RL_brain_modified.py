@@ -24,7 +24,7 @@ class DeepQNetwork:
             replace_target_iter=200,
             memory_size=30000,
             batch_size=128,
-            e_greedy_increment=1e-4,
+            e_greedy_increment=3e-4,
             output_graph=False,
     ):
         self.n_actions = n_actions
@@ -44,6 +44,8 @@ class DeepQNetwork:
         # initialize zero memory [s, a, r, s_]
         self.memory = np.zeros((self.memory_size, n_features * 2 + 2))
 
+        self.set_hotspot_valid_hour()
+
         # consist of [target_net, evaluate_net]
         self._build_net()
         t_params = tf.get_collection('target_net_params')
@@ -59,6 +61,32 @@ class DeepQNetwork:
 
         self.sess.run(tf.global_variables_initializer())
         self.cost_his = []
+
+    def random_action(self, time):
+        hour = int(time / 3600)
+        action = np.random.choice(self.hotspot_valid[hour]) - 1
+
+        return action
+
+    def _set_valid(self, i):
+        self.hotspot_valid[i] = []
+
+        file_name = 'hotspot_valid/' + str(i+1) + '.txt'
+        with open(file_name) as f:
+            for line in f:
+                data = line.strip().split(',')
+                hotspot = int(data[0])
+                
+                #if the hotspot is visited more times, then it is likely to be selected in random_action()
+                self.hotspot_valid[i].append(hotspot)
+
+    def set_hotspot_valid_hour(self):
+        n = len(os.listdir('hotspot_valid/'))
+        self.hotspot_valid = n * [None]
+
+        for i in range(n):
+            self._set_valid(i)
+
 
     def _build_net(self):
         # ------------------ build evaluate_net ------------------
@@ -130,7 +158,7 @@ class DeepQNetwork:
         self.memory_counter += 1
 
     ###########################################################
-    def choose_action(self, observation):
+    def choose_action(self, observation, time):
         # to have batch dimension when feed into tf placeholder
         observation = observation[np.newaxis, :]
 
@@ -140,7 +168,8 @@ class DeepQNetwork:
             action = np.argmax(actions_value)
 
         else:
-            action = np.random.randint(0, self.n_actions)
+            action = self.random_action(time)
+            #action = np.random.randint(0, self.n_actions)
             ###########################################################
         return action
 

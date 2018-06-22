@@ -61,75 +61,27 @@ class Env:
         self.set_sensors_points()
 
         # sensor 在每个时间段访问hotspot的次数
-        self.sensors_visit_hotspot_times_8 = {}
-        self.sensors_visit_hotspot_times_9 = {}
-        self.sensors_visit_hotspot_times_10 = {}
-        self.sensors_visit_hotspot_times_11 = {}
-        self.sensors_visit_hotspot_times_12 = {}
-        self.sensors_visit_hotspot_times_13 = {}
-        self.sensors_visit_hotspot_times_14 = {}
-        self.sensors_visit_hotspot_times_15 = {}
-        self.sensors_visit_hotspot_times_16 = {}
-        self.sensors_visit_hotspot_times_17 = {}
-        self.sensors_visit_hotspot_times_18 = {}
-        self.sensors_visit_hotspot_times_19 = {}
-        self.sensors_visit_hotspot_times_20 = {}
-        self.sensors_visit_hotspot_times_21 = {}
         self.set_sensors_visit_hotspot_times()
 
     def get_sensors_visit_hotspot_times_info(self,hour):
-        if hour == 8:
-            return self.sensors_visit_hotspot_times_8
-        elif hour == 9:
-            return self.sensors_visit_hotspot_times_9
-        elif hour == 10:
-            return self.sensors_visit_hotspot_times_10
-        elif hour == 11:
-            return self.sensors_visit_hotspot_times_11
-        elif hour == 12:
-            return self.sensors_visit_hotspot_times_12
-        elif hour == 13:
-            return self.sensors_visit_hotspot_times_13
-        elif hour == 14:
-            return self.sensors_visit_hotspot_times_14
-        elif hour == 15:
-            return self.sensors_visit_hotspot_times_15
-        elif hour == 16:
-            return self.sensors_visit_hotspot_times_16
-        elif hour == 17:
-            return self.sensors_visit_hotspot_times_17
-        elif hour == 18:
-            return self.sensors_visit_hotspot_times_18
-        elif hour == 19:
-            return self.sensors_visit_hotspot_times_19
-        elif hour == 20:
-            return self.sensors_visit_hotspot_times_20
-        elif hour == 21:
-            return self.sensors_visit_hotspot_times_21
+        return self.sensors_visit_hotspot_times[hour]
 
-    def set_sensors_visit_hotspot_times_phase(self, hour, sensors_visit_hotspot_times):
-        files = os.listdir('hotspot_sensor/' + str(hour))
+    def set_sensors_visit_hotspot_times_phase(self, hour):
+        self.sensors_visit_hotspot_times[hour] = {}
+
+        files = os.listdir('hotspot_sensor/' + str(hour+1))
         for file in files:
             hotspot_num = file.split('.')[0]
-            with open('hotspot_sensor/' + str(hour) + '/' + file) as f:
+            with open('hotspot_sensor/' + str(hour+1) + '/' + file) as f:
                 lines = f.readlines()
-                sensors_visit_hotspot_times[hotspot_num] = lines
+                self.sensors_visit_hotspot_times[hour][hotspot_num] = lines
 
     def set_sensors_visit_hotspot_times(self):
-        self.set_sensors_visit_hotspot_times_phase(8, self.sensors_visit_hotspot_times_8)
-        self.set_sensors_visit_hotspot_times_phase(9, self.sensors_visit_hotspot_times_9)
-        self.set_sensors_visit_hotspot_times_phase(10, self.sensors_visit_hotspot_times_10)
-        self.set_sensors_visit_hotspot_times_phase(11, self.sensors_visit_hotspot_times_11)
-        self.set_sensors_visit_hotspot_times_phase(12, self.sensors_visit_hotspot_times_12)
-        self.set_sensors_visit_hotspot_times_phase(13, self.sensors_visit_hotspot_times_13)
-        self.set_sensors_visit_hotspot_times_phase(14, self.sensors_visit_hotspot_times_14)
-        self.set_sensors_visit_hotspot_times_phase(15, self.sensors_visit_hotspot_times_15)
-        self.set_sensors_visit_hotspot_times_phase(16, self.sensors_visit_hotspot_times_16)
-        self.set_sensors_visit_hotspot_times_phase(17, self.sensors_visit_hotspot_times_17)
-        self.set_sensors_visit_hotspot_times_phase(18, self.sensors_visit_hotspot_times_18)
-        self.set_sensors_visit_hotspot_times_phase(19, self.sensors_visit_hotspot_times_19)
-        self.set_sensors_visit_hotspot_times_phase(20, self.sensors_visit_hotspot_times_20)
-        self.set_sensors_visit_hotspot_times_phase(21, self.sensors_visit_hotspot_times_21)
+        sensor_num = len(os.listdir('hotspot_sensor/'))
+        self.sensors_visit_hotspot_times = sensor_num * [None]
+        
+        for i in range(sensor_num):
+            self.set_sensors_visit_hotspot_times_phase(i) 
 
     def set_sensors_points(self):
         for i in range(17):
@@ -211,9 +163,9 @@ class Env:
         self.sensors_mobile_charger['MC'][0] = self.sensors_mobile_charger['MC'][0] \
                                                - self.sensors_mobile_charger['MC'][1] * distance
                                                
-        # 获取当前时间段,下面的path中使用，加8是因为从8点开始
         start_wait_seconds = self.get_evn_time()
-        hour = int(start_wait_seconds / 3600) + 8
+        #every 20 min
+        hour = int(start_wait_seconds / 1200) 
         
         # 将在hotspot_num 等待的时间 添加到state中的CS
         for i in range(42):
@@ -339,7 +291,7 @@ class Env:
 
         #phase = int(end_wait_seconds / 3600) + 8
         # mc 给到达的sensor 充电后，如果能量为负或者 self.get_evn_time() > self.one_episode_time，则回合结束，反之继续
-        if self.sensors_mobile_charger['MC'][0] <= 0 or self.get_evn_time() + 30 * 60 > self.one_episode_time:
+        if self.sensors_mobile_charger['MC'][0] <= 0 or self.get_evn_time() + 10 * 60 > self.one_episode_time:
             done = 1
             #print self.move_dist, self.get_evn_time()
         else:

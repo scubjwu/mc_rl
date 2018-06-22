@@ -6,7 +6,7 @@ from RL_brain_modified import DeepQNetwork
 
 def run_maze():
     step = 0
-    for episode in range(4000):
+    for episode in range(10000):
         print('episode = .................................', episode)
         with open('./result.txt', 'a') as res:
             res.write('episode = .................................' + str(episode) + '\n')
@@ -23,7 +23,7 @@ def run_maze():
                 init = False
 
             # RL choose action based on observation
-            action = RL.choose_action(observation)
+            action = RL.choose_action(observation, env.get_evn_time())
 
             # RL take action and get next observation and reward
             observation_, reward, done = env.step(action)
