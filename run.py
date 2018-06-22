@@ -32,7 +32,7 @@ def run_maze():
 
             RL.store_transition(observation, action, reward, observation_)
 
-            if (step > 50) and (step % 5 == 0):
+            if (step > 20000) and (step % 50 == 0):
                 RL.learn()
 
             # swap observation

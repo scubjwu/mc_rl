@@ -20,11 +20,11 @@ class DeepQNetwork:
             n_features=17 * 45 + 42 * 3,
             learning_rate=0.001,
             reward_decay=0.9,
-            e_greedy=0.95,
+            e_greedy=0.9,
             replace_target_iter=200,
-            memory_size=15000,
-            batch_size=256,
-            e_greedy_increment=None,
+            memory_size=30000,
+            batch_size=128,
+            e_greedy_increment=1e-4,
             output_graph=False,
     ):
         self.n_actions = n_actions
@@ -67,8 +67,8 @@ class DeepQNetwork:
         with tf.variable_scope('eval_net'):
             # c_names(collections_names) are the collections to store variables
             c_names, n_l1, n_l2, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 700, 700, \
-                tf.random_normal_initializer(0., 0.1), tf.constant_initializer(-0.1)  # config of layers
+                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 800, 800, \
+                tf.random_normal_initializer(0., 0.2), tf.constant_initializer(0.1)  # config of layers
 
             # hidden layer. collections is used later when assign to target net
             with tf.variable_scope('l1'):
@@ -76,16 +76,16 @@ class DeepQNetwork:
                 b1 = tf.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
                 l1 = tf.nn.relu(tf.matmul(self.s, w1) + b1)
 
-            with tf.variable_scope('l2'):
-                w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
-                b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
-                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+            #with tf.variable_scope('l2'):
+            #    w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
+            #    b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
+            #    l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
 
             # output layer. collections is used later when assign to target net
             with tf.variable_scope('l3'):
                 w3 = tf.get_variable('w3', [n_l2, self.n_actions], initializer=w_initializer, collections=c_names)
                 b3 = tf.get_variable('b3', [1, self.n_actions], initializer=b_initializer, collections=c_names)
-                self.q_eval = tf.matmul(l2, w3) + b3
+                self.q_eval = tf.matmul(l1, w3) + b3
 
         with tf.variable_scope('loss'):
             self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_eval))
@@ -106,16 +106,16 @@ class DeepQNetwork:
                 b1 = tf.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
                 l1 = tf.nn.relu(tf.matmul(self.s_, w1) + b1)
 
-            with tf.variable_scope('l2'):
-                w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
-                b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
-                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+            #with tf.variable_scope('l2'):
+            #    w2 = tf.get_variable('w2', [n_l1, n_l2], initializer=w_initializer, collections=c_names)
+            #    b2 = tf.get_variable('b2', [1, n_l2], initializer=b_initializer, collections=c_names)
+            #    l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
 
             # output layer. collections is used later when assign to target net
             with tf.variable_scope('l3'):
                 w3 = tf.get_variable('w3', [n_l2, self.n_actions], initializer=w_initializer, collections=c_names)
                 b3 = tf.get_variable('b3', [1, self.n_actions], initializer=b_initializer, collections=c_names)
-                self.q_next = tf.matmul(l2, w3) + b3
+                self.q_next = tf.matmul(l1, w3) + b3
 
     def store_transition(self, s, a, r, s_):
         if not hasattr(self, 'memory_counter'):
@@ -177,9 +177,10 @@ class DeepQNetwork:
                                                 self.q_target: q_target})
 
         self.cost_his.append(self.cost)
-        print('self.cost', self.cost)
+        print('loss, greedy-e', self.cost, self.epsilon)
         # increasing epsilon
-        self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
+        if self.memory_counter > 20000:
+            self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
 
         self.learn_step_counter += 1
         #print('learning ......', self.learn_step_counter, '    times')
