@@ -4,8 +4,9 @@ from Env_modified import Env
 from RL_brain_modified import DeepQNetwork
 
 
-def run_maze():
+def run(RL):
     step = 0
+
     for episode in range(10000):
         print('episode = .................................', episode)
         with open('./result.txt', 'a') as res:
@@ -19,7 +20,7 @@ def run_maze():
         while True:
 
             if init is True:
-                observation, _, _ = env.reset(RL)
+                observation = env.reset()
                 init = False
 
             # RL choose action based on observation
@@ -27,12 +28,13 @@ def run_maze():
 
             # RL take action and get next observation and reward
             observation_, reward, done = env.step(action)
-            #print action, reward
+            #print 'reward: ', reward
             total_reward += reward
 
-            RL.store_transition(observation, action, reward, observation_)
+            RL.store_transition(observation, action, reward, env.get_evn_time(), observation_)
 
-            if (step > 20000) and (step % 50 == 0):
+            #if (step > 5000) and (step % 25 == 0):
+            if (step > 500) and (step % 5 == 0):
                 RL.learn()
 
             # swap observation
@@ -55,8 +57,7 @@ def run_maze():
 
 
 if __name__ == "__main__":
-    # game
     RL = DeepQNetwork()
 
-    run_maze()
+    run(RL)
     #RL.plot_cost()

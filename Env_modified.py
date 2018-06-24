@@ -77,10 +77,10 @@ class Env:
                 self.sensors_visit_hotspot_times[hour][hotspot_num] = lines
 
     def set_sensors_visit_hotspot_times(self):
-        sensor_num = len(os.listdir('hotspot_sensor/'))
-        self.sensors_visit_hotspot_times = sensor_num * [None]
+        phase_num = len(os.listdir('hotspot_sensor/'))
+        self.sensors_visit_hotspot_times = phase_num * [None]
         
-        for i in range(sensor_num):
+        for i in range(phase_num):
             self.set_sensors_visit_hotspot_times_phase(i) 
 
     def set_sensors_points(self):
@@ -139,13 +139,10 @@ class Env:
     def step(self, action):
         reward = 0
         
-        if action != -1:
-            hotspot_num = action + 1
-            staying_time = 1
-        else:
-            hotspot_num = 0
-            staying_time = 0
-        	
+        hotspot_num = action[0]
+        staying_time = action[1]
+
+
         # 得到下一个hotspot
         hotspot = self.find_hotspot_by_num(hotspot_num)
         # 当前hotspot 和 下一个hotspot间的距离,得到移动花费的时间，添加到self.move_time 里
@@ -176,25 +173,20 @@ class Env:
             else:
                 self.state[3 * i + 2] = 0
 
-
         self.total_time += staying_time * 5 * 60
-
 
         # mc 结束等待后环境的时间
         end_wait_seconds = self.get_evn_time()
 
-	#in total 42 hotspots
         hotspot_info = []
-	for i in range(42):
-	    #path = './hotspot_sensor/' + str(hour) + '/' + str(i+1) + '.txt'
-            # 读取文件，得到在当前时间段，hotspot_num 的访问情况，用字典保存。key: sensor 编号；value: 访问次数
+        for i in range(42):
             hotspot_num_sensor_arrived_times = {}
             sensors_visit_hotspot_info = self.get_sensors_visit_hotspot_times_info(hour)[str(i+1)]
             for line in sensors_visit_hotspot_info:
                 data = line.strip().split(',')
                 hotspot_num_sensor_arrived_times[data[0]] = data[1]
-		
-	    hotspot_info.append(hotspot_num_sensor_arrived_times)
+
+            hotspot_info.append(hotspot_num_sensor_arrived_times)
 
 	for i in range(17):
 	    start = 42 * 3 + i * (3 + 42)
@@ -276,17 +268,17 @@ class Env:
                     sensor[3] = False
                     reward += self.charging_penalty 
 
-            hotspot_pro = []
+
             for j in range(42):
-		pj = int(hotspot_info[j][str(i)])
-		if pj == 0:
+                pj = int(hotspot_info[j][str(i)])
+                if pj == 0:
 		    pj_encode = self.belong_label_binarizer.transform(['0']).tolist()[0][0]
-		else:
+                else:
 		    pj_encode = self.belong_label_binarizer.transform(['1']).tolist()[0][0]
-			
-		hotspot_pro.append(pj_encode)
-		 
-	    self.state[end:end+42] = hotspot_pro   
+
+                self.state[end] = pj_encode
+                end += 1
+
 	    #end of sensor infor update
 
         #phase = int(end_wait_seconds / 3600) + 8
@@ -301,7 +293,7 @@ class Env:
         return observation, reward, done
 
     # 初始化整个环境
-    def reset(self, RL):
+    def reset(self):
         # 前面0~83 都初始化为 0。记录CS的信息，每个hotspot占两位
         for i in range(42 * 3):
             self.state.append(0)
@@ -312,12 +304,9 @@ class Env:
         	
         # 得到一个随机的8点时间段的action,例如 43,1 表示到43 号hotspot 等待1个t
         # print(len(self.state))
-        action = -1
         self.current_hotspot = self.hotspots[0]      
-
-        state_, reward_, done_ = self.step(action)
         
-        return state_, reward_, done_
+        return np.array(self.state)
 
     # 传入时间字符串，如：09：02：03，转化成与 08:00:00 间的秒数差
     def str_to_seconds(self, input_str):
