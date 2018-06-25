@@ -15,6 +15,7 @@ def run(RL):
         # initial 
         init = True
         total_reward = 0
+        total_t_reward = 0
         env = Env()
 
         while True:
@@ -26,15 +27,22 @@ def run(RL):
             # RL choose action based on observation
             action = RL.choose_action(observation, env.get_evn_time())
 
+            with open('./result.txt', 'a') as res:
+                res.write('action: ' + str(action) + '\n')
+
             # RL take action and get next observation and reward
-            observation_, reward, done = env.step(action)
-            #print 'reward: ', reward
+            observation_, reward, t_reward, done = env.step(action)
+
+            with open('./result.txt', 'a') as res:
+                res.write('reward diff: ' + str(reward) + ', ' + str(t_reward) + '\n')
+
             total_reward += reward
+            total_t_reward += t_reward
 
             RL.store_transition(observation, action, reward, env.get_evn_time(), observation_)
 
             #if (step > 5000) and (step % 25 == 0):
-            if (step > 500) and (step % 5 == 0):
+            if (step > 200) and (step % 5 == 0):
                 RL.learn()
 
             # swap observation
@@ -42,11 +50,13 @@ def run(RL):
 
             # break while loop when end of this episode
             if done:
-                print('total step:', step)
-                print('total reward         ', total_reward)
+                print('total step: ', step)
+                print('total reward: ', total_reward)
+                print('total t_reward: ', total_t_reward)
 
                 with open('./result.txt', 'a') as res:
-                    res.write('总奖励:    ' + str(total_reward) + '\n')
+                    res.write('Real reward: ' + str(total_reward) + '\n')
+                    res.write('Theorical reward: ' + str(total_t_reward) + '\n')
 
                 break
 

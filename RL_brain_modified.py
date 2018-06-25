@@ -21,10 +21,10 @@ class DeepQNetwork:
             reward_decay=0.9,
             e_greedy=0.9,
             replace_target_iter=200,
-            memory_size=30000,
-            batch_size=256,
-            #e_greedy_increment=0.001,
-            e_greedy_increment=None,
+            memory_size=4000,
+            batch_size=32,
+            e_greedy_increment=0.02,
+            #e_greedy_increment=None,
             output_graph=False,
     ):
         self.n_actions = n_actions
@@ -106,7 +106,7 @@ class DeepQNetwork:
         with tf.variable_scope('eval_net'):
             # c_names(collections_names) are the collections to store variables
             c_names, n_l1, n_l2, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 800, 800, \
+                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 800, 700, \
                 tf.glorot_uniform_initializer(1), tf.constant_initializer(0.05)  # config of layers
                 #tf.random_normal_initializer(0., 0.1), tf.constant_initializer(0.1)  # config of layers
 
@@ -262,7 +262,7 @@ class DeepQNetwork:
                 feed_dict={self.s: q_eval_all_action_state,
                            self.q_target: q_target})
 
-        self.cost_his.append(self.cost)
+        #self.cost_his.append(self.cost)
         print('loss, greedy-e', self.cost, self.epsilon)
         
         # increasing epsilon

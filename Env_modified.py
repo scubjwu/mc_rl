@@ -138,6 +138,7 @@ class Env:
     # 传入一个action, 得到下一个state，reward，和 done(是否回合结束)的信息
     def step(self, action):
         reward = 0
+        t_reward = 0
         
         hotspot_num = action[0]
         staying_time = action[1]
@@ -215,6 +216,9 @@ class Env:
             #sensor_path = './sensors/' + str(i) + '.txt'
             sensor_points = self.sensors_points[i]
             for point_line in sensor_points:
+                if int(hotspot_info[hotspot_num - 1][str(i)]) == 0:
+                    break
+
                 data = point_line.strip().split(',')
                 point_time = self.str_to_seconds(data[2])
                 point = Point(float(data[0]), float(data[1]), data[2])
@@ -240,6 +244,12 @@ class Env:
                 self.state[start:end] = rl_one_hot_encoded
 
             elif 0 < rl < 2 * 3600:
+            #compute the theorical reward
+                freq = int(hotspot_info[hotspot_num - 1][str(i)])
+                wt = staying_time * 5
+                pr = 1 - math.exp(-freq * wt / 20)
+                t_reward += pr * math.exp(-rl / 3600)
+                
             # 更新state中 的剩余寿命信息的状态
             # 得到 小于阈值的 独热编码,转换成list,然后更新state 中的状态
                 rl_one_hot_encoded = self.rl_label_binarizer.transform(['Smaller than the threshold value, 1']).tolist()[0]
@@ -267,6 +277,7 @@ class Env:
                 if sensor_alive:
                     sensor[3] = False
                     reward += self.charging_penalty 
+                    t_reward += self.charging_penalty
 
 
             for j in range(42):
@@ -290,7 +301,7 @@ class Env:
             done = 0
 
         observation = np.array(self.state)
-        return observation, reward, done
+        return observation, reward, t_reward, done
 
     # 初始化整个环境
     def reset(self):
