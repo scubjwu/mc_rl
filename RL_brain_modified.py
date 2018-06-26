@@ -21,10 +21,10 @@ class DeepQNetwork:
             reward_decay=0.9,
             e_greedy=0.9,
             replace_target_iter=200,
-            memory_size=4000,
+            memory_size=2000,
             batch_size=32,
-            e_greedy_increment=0.02,
-            #e_greedy_increment=None,
+            #e_greedy_increment=0.02,
+            e_greedy_increment=None,
             output_graph=False,
     ):
         self.n_actions = n_actions
@@ -42,7 +42,7 @@ class DeepQNetwork:
         self.learn_step_counter = 0
 
         # initialize zero memory [s, a, r, s_]
-        self.memory = np.zeros((self.memory_size, (17 * 45 + 42 * 3) * 2 + 4))
+        self.memory = np.zeros((self.memory_size, (17 * 45 + 42 * 3) * 2 + 5))
 
         self.set_hotspot_valid_hour()
 
@@ -106,7 +106,7 @@ class DeepQNetwork:
         with tf.variable_scope('eval_net'):
             # c_names(collections_names) are the collections to store variables
             c_names, n_l1, n_l2, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 800, 700, \
+                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 800, 800, \
                 tf.glorot_uniform_initializer(1), tf.constant_initializer(0.05)  # config of layers
                 #tf.random_normal_initializer(0., 0.1), tf.constant_initializer(0.1)  # config of layers
 
@@ -157,11 +157,11 @@ class DeepQNetwork:
                 b3 = tf.get_variable('b3', [1, self.n_actions], initializer=b_initializer, collections=c_names)
                 self.q_next = tf.matmul(l2, w3) + b3
 
-    def store_transition(self, s, a, r, t_, s_):
+    def store_transition(self, s, a, r, t_, done_, s_):
         if not hasattr(self, 'memory_counter'):
             self.memory_counter = 0
 
-        transition = np.hstack((s, a, r, int(t_/1200), s_))
+        transition = np.hstack((s, a, r, int(t_/1200), done_, s_))
 
         # replace the old memory with new memory
         index = self.memory_counter % self.memory_size
@@ -239,19 +239,25 @@ class DeepQNetwork:
             reward_i = batch_memory_row[state_len + action_len]
             hour_i = batch_memory_row[state_len + action_len + 1]
 
+            done_i_1 = batch_memory_row[state_len + action_len + 2]
             state_i_1 = batch_memory_row[-state_len:][np.newaxis, :]
-            reward_next = -sys.maxint - 1
-            for h, wt in self.hotspot_valid[int(hour_i)].items():
-                h_encode = self.hotspot_num_encode.transform([str(h)])[0]
-                for wt_i in range(1, wt+1):
-                    action_i_1 = np.r_[h_encode, wt_i][np.newaxis, :]
-                    action_state_i_1 = np.c_[action_i_1, state_i_1]
 
-                    action_value = self.sess.run(self.q_next, feed_dict={self.s_: action_state_i_1})[0][0]
+            if done_i_1:
+                y_i = reward_i
+            else:
+                reward_next = -sys.maxint - 1
+                for h, wt in self.hotspot_valid[int(hour_i)].items():
+                    h_encode = self.hotspot_num_encode.transform([str(h)])[0]
+                    for wt_i in range(1, wt+1):
+                        action_i_1 = np.r_[h_encode, wt_i][np.newaxis, :]
+                        action_state_i_1 = np.c_[action_i_1, state_i_1]
 
-                    reward_next = action_value if action_value > reward_next else reward_next
+                        action_value = self.sess.run(self.q_next, feed_dict={self.s_: action_state_i_1})[0][0]
 
-            y_i = reward_i + self.gamma * reward_next 
+                        reward_next = action_value if action_value > reward_next else reward_next
+
+                y_i = reward_i + self.gamma * reward_next 
+
             if row == 0:
                 q_target = np.array([y_i])[np.newaxis, :]
             else:

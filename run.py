@@ -39,7 +39,7 @@ def run(RL):
             total_reward += reward
             total_t_reward += t_reward
 
-            RL.store_transition(observation, action, reward, env.get_evn_time(), observation_)
+            RL.store_transition(observation, action, reward, env.get_evn_time(), done, observation_)
 
             #if (step > 5000) and (step % 25 == 0):
             if (step > 200) and (step % 5 == 0):
@@ -57,6 +57,7 @@ def run(RL):
                 with open('./result.txt', 'a') as res:
                     res.write('Real reward: ' + str(total_reward) + '\n')
                     res.write('Theorical reward: ' + str(total_t_reward) + '\n')
+                    res.write('Total step: ' + str(step) + '\n')
 
                 break
 
